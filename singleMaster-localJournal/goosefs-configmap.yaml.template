@@ -1,0 +1,41 @@
+---
+# Source: goosefs/templates/config/goosefs-conf.yaml
+#
+# The Alluxio Open Foundation licenses this work under the Apache License, version 2.0
+# (the "License"). You may not use this work except in compliance with the License, which is
+# available at www.apache.org/licenses/LICENSE-2.0
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied, as more fully set forth in the License.
+#
+# See the NOTICE file distributed with this work for information regarding copyright ownership.
+#
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  name: goosefs-config
+  labels:
+    name: goosefs-config
+    app: goosefs
+    chart: goosefs-0.6.30
+    release: goosefs
+    heritage: Helm
+data:
+  GOOSEFS_JAVA_OPTS: |-
+    -Dgoosefs.master.journal.type=UFS -Dgoosefs.master.journal.folder=/journal -Dgoosefs.master.hostname=81.71.43.151 -Dgoosefs.security.stale.channel.purge.interval=365d 
+  GOOSEFS_MASTER_JAVA_OPTS: |-
+    -Dgoosefs.master.hostname=81.71.43.151 
+  GOOSEFS_JOB_MASTER_JAVA_OPTS: |-
+    
+  GOOSEFS_WORKER_JAVA_OPTS: |-
+    -Dgoosefs.worker.rpc.port=9203 -Dgoosefs.worker.web.port=9204 -Dgoosefs.worker.data.server.domain.socket.address=/opt/domain -Dgoosefs.worker.data.server.domain.socket.as.uuid=true -Dgoosefs.worker.container.hostname=${GOOSEFS_WORKER_CONTAINER_HOSTNAME} -Dgoosefs.worker.ramdisk.size=2G -Dgoosefs.worker.tieredstore.levels=1 -Dgoosefs.worker.tieredstore.level0.alias=MEM -Dgoosefs.worker.tieredstore.level0.dirs.mediumtype=MEM -Dgoosefs.worker.tieredstore.level0.dirs.path=/dev/shm -Dgoosefs.worker.tieredstore.level0.dirs.quota=1G -Dgoosefs.worker.tieredstore.level0.watermark.high.ratio=0.95 -Dgoosefs.worker.tieredstore.level0.watermark.low.ratio=0.7 
+  GOOSEFS_JOB_WORKER_JAVA_OPTS: |-
+    -Dgoosefs.worker.hostname=${GOOSEFS_WORKER_HOSTNAME} -Dgoosefs.job.worker.rpc.port=9208 -Dgoosefs.job.worker.data.port=9209 -Dgoosefs.job.worker.web.port=9210 
+  GOOSEFS_FUSE_JAVA_OPTS: |-
+    -Dgoosefs.master.hostname=81.71.43.151 -XX:MaxDirectMemorySize=1g 
+  GOOSEFS_WORKER_TIEREDSTORE_LEVEL0_DIRS_PATH: /dev/shm

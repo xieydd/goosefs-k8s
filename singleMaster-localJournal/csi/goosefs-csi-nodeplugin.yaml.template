@@ -1,0 +1,127 @@
+---
+# Source: goosefs/templates/csi/nodeplugin.yaml
+#
+# The Alluxio Open Foundation licenses this work under the Apache License, version 2.0
+# (the "License"). You may not use this work except in compliance with the License, which is
+# available at www.apache.org/licenses/LICENSE-2.0
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied, as more fully set forth in the License.
+#
+# See the NOTICE file distributed with this work for information regarding copyright ownership.
+#
+
+
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: goosefs-csi-nodeplugin
+  labels:
+    name: goosefs-csi-nodeplugin
+    app: goosefs
+    chart: goosefs-0.6.30
+    release: goosefs
+    heritage: Helm
+    role: goosefs-csi-nodeplugin
+spec:
+  selector:
+    matchLabels:
+      app: goosefs
+      role: goosefs-csi-nodeplugin
+      name: goosefs-csi-nodeplugin
+  template:
+    metadata:
+      labels:
+        name: goosefs-csi-nodeplugin
+        app: goosefs
+        chart: goosefs-0.6.30
+        release: goosefs
+        heritage: Helm
+        role: goosefs-csi-nodeplugin
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: node-driver-registrar
+          image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/goosefs /registration/goosefs-reg.sock"]
+          args:
+            - --v=5
+            - --csi-address=/plugin/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-goosefs-plugin/csi.sock
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+            - name: registration-dir
+              mountPath: /registration
+        - name: csi-nodeserver
+          # run as root user, mount command need root privilege
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            capabilities:
+              add: ["SYS_ADMIN"]
+          resources:
+            limits:
+              cpu: 4
+              memory: 8G
+            requests:
+              cpu: 1
+              memory: 1G
+          image: ccr.ccs.tencentyun.com/cosdev/goosefs:v1.1.0-csi
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/local/bin/goosefs-csi"]
+          args :
+            - --v=5
+            - "--nodeid=$(NODE_ID)"
+            - "--endpoint=$(CSI_ENDPOINT)"
+          env:
+            - name: GOOSEFS_CLIENT_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix://plugin/csi.sock
+          envFrom:
+            - configMapRef:
+                name: goosefs-config
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: "Bidirectional"
+      volumes:
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-goosefs-plugin
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir

@@ -1,0 +1,61 @@
+---
+# Source: goosefs/templates/fuse/client-daemonset.yaml
+#
+# The Alluxio Open Foundation licenses this work under the Apache License, version 2.0
+# (the "License"). You may not use this work except in compliance with the License, which is
+# available at www.apache.org/licenses/LICENSE-2.0
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied, as more fully set forth in the License.
+#
+# See the NOTICE file distributed with this work for information regarding copyright ownership.
+#
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: goosefs-fuse-client
+  labels:
+    app: goosefs
+    chart: goosefs-0.6.30
+    release: goosefs
+    heritage: Helm
+    role: goosefs-fuse-client
+spec:
+  selector:
+    matchLabels:
+      app: goosefs
+      chart: goosefs-0.6.30
+      release: goosefs
+      heritage: Helm
+      role: goosefs-fuse-client
+  template:
+    metadata:
+      labels:
+        app: goosefs
+        chart: goosefs-0.6.30
+        release: goosefs
+        heritage: Helm
+        role: goosefs-fuse-client
+    spec:
+      containers:
+        - name: goosefs-fuse-client
+          image: alpine:latest
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "500M"
+            limits:
+              cpu: "1"
+              memory: "500M"
+          command: ["/bin/sh", "-c", "--"]
+          args: ["while true; do sleep 30 && echo .; done;"]
+          volumeMounts:
+            - name: goosefs-fuse-mount
+              mountPath: /mnt
+      restartPolicy: Always
+      volumes:
+        - name: goosefs-fuse-mount
+          hostPath:
+            path: /mnt
+            type: Directory

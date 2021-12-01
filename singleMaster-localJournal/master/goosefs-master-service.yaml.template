@@ -1,0 +1,44 @@
+---
+# Source: goosefs/templates/master/service.yaml
+#
+# The Alluxio Open Foundation licenses this work under the Apache License, version 2.0
+# (the "License"). You may not use this work except in compliance with the License, which is
+# available at www.apache.org/licenses/LICENSE-2.0
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied, as more fully set forth in the License.
+#
+# See the NOTICE file distributed with this work for information regarding copyright ownership.
+#
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: goosefs-master-0
+  labels:
+    app: goosefs
+    chart: goosefs-0.6.30
+    release: goosefs
+    heritage: Helm
+    role: goosefs-master
+spec:
+  ports:
+    - port: 9200
+      name: rpc
+    - port: 9201
+      name: web
+    - port: 9205
+      name: job-rpc
+    - port: 9206
+      name: job-web
+    - port: 9203
+      name: embedded
+    - port: 9207
+      name: job-embedded
+  clusterIP: None
+  selector:
+    role: goosefs-master
+    app: goosefs
+    release: goosefs
+    statefulset.kubernetes.io/pod-name: goosefs-master-0

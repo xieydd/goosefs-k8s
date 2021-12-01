@@ -1,0 +1,118 @@
+---
+# Source: goosefs/templates/fuse/daemonset.yaml
+#
+# The Alluxio Open Foundation licenses this work under the Apache License, version 2.0
+# (the "License"). You may not use this work except in compliance with the License, which is
+# available at www.apache.org/licenses/LICENSE-2.0
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied, as more fully set forth in the License.
+#
+# See the NOTICE file distributed with this work for information regarding copyright ownership.
+#
+
+
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: goosefs-fuse
+  labels:
+    app: goosefs
+    chart: goosefs-0.6.30
+    release: goosefs
+    heritage: Helm
+    role: goosefs-fuse
+spec:
+  selector:
+    matchLabels:
+      app: goosefs
+      chart: goosefs-0.6.30
+      release: goosefs
+      heritage: Helm
+      role: goosefs-fuse
+  template:
+    metadata:
+      labels:
+        app: goosefs
+        chart: goosefs-0.6.30
+        release: goosefs
+        heritage: Helm
+        role: goosefs-fuse
+    spec:
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+      tolerations:
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - goosefs
+              - key: role
+                operator: In
+                values:
+                - goosefs-worker
+            topologyKey: kubernetes.io/hostname
+      containers:
+        - name: goosefs-fuse
+          image: ccr.ccs.tencentyun.com/cosdev/goosefs:v1.1.0-csi
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 4
+              memory: 4G
+            requests:
+              cpu: 0.5
+              memory: 1G
+          command: ["/entrypoint.sh"]
+          args:
+            - fuse
+            - --fuse-opts=allow_other
+          env:
+          - name: GOOSEFS_CLIENT_HOSTNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - SYS_ADMIN
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/opt/goosefs/integration/fuse/bin/goosefs-fuse", "unmount", "/mnt/goosefs-fuse"]
+          envFrom:
+          - configMapRef:
+              name: goosefs-config
+          volumeMounts:
+            - name: goosefs-fuse-device
+              mountPath: /dev/fuse
+            - name: goosefs-fuse-mount
+              mountPath: /mnt
+              mountPropagation: Bidirectional
+            - name: goosefs-domain
+              mountPath: /opt/domain
+      restartPolicy: Always
+      volumes:
+        - name: goosefs-fuse-device
+          hostPath:
+            path: /dev/fuse
+            type: CharDevice
+        - name: goosefs-fuse-mount
+          hostPath:
+            path: /mnt
+            type: DirectoryOrCreate
+        - name: goosefs-domain
+          persistentVolumeClaim:
+            claimName: "goosefs-worker-domain-socket"
